@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ứng dụng Quản lý Bán hàng</title>
+  <!-- React và Tailwind -->
+  <script defer src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script defer src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script defer src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDK -->
+  <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <!-- Cấu hình Firebase -->
+  <script>
+    const __firebase_config = JSON.stringify({
+      apiKey: "AIzaSyC_6t2QpzJD-JjGBvjEmUMW7Uaq04ebDKQ",
+      authDomain: "thu-chi-ban-hang.firebaseapp.com",
+      projectId: "thu-chi-ban-hang",
+      storageBucket: "thu-chi-ban-hang.firebasestorage.app",
+      messagingSenderId: "684992126489",
+      appId: "1:684992126489:web:b2362ae379ebf813bd9488",
+      measurementId: "G-2W6XJ1EXQV"
+    });
+    const __app_id = "thu-chi-ban-hang";
+  </script>
+
+  <!-- Mã ứng dụng React (từ app.js) -->
+  <script defer src="./app.js"></script>
+</head>
+<body class="bg-gray-100">
+  <div id="root" class="min-h-screen"></div>
+</body>
+</html>
