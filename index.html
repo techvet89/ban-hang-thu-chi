@@ -19,15 +19,12 @@
     <!-- CSS tùy chỉnh -->
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .page { display: none; }
-        .page.active { display: block; }
-        /* Thêm style cho spinner */
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            border-left-color: #09f;
+            border-left-color: #fff;
             animation: spin 1s ease infinite;
         }
         @keyframes spin {
@@ -39,9 +36,9 @@
 <body class="bg-gray-100">
 
     <!-- Giao diện chính của ứng dụng -->
-    <div class="flex h-screen bg-gray-200">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-slate-800 text-slate-200 flex-shrink-0 hidden md:block">
+    <div class="relative min-h-screen md:flex">
+        <!-- Sidebar cho Desktop -->
+        <aside class="w-64 bg-slate-800 text-slate-200 flex-shrink-0 hidden md:flex md:flex-col">
             <div class="p-6">
                 <h1 class="text-2xl font-bold text-white text-center mb-2">Ngô Văn Đô</h1>
                 <p class="text-sm text-slate-400 text-center mb-8">Quản lý Bán hàng</p>
@@ -50,113 +47,23 @@
         </aside>
 
         <!-- Nội dung chính -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="flex justify-between items-center p-4 bg-white border-b">
+        <div class="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
+            <header class="flex justify-between items-center p-4 bg-white border-b sticky top-0 z-10">
                 <h2 id="page-title" class="text-xl font-bold text-gray-800">Bảng điều khiển</h2>
                 <div id="user-info" class="text-sm text-gray-600">Đang tải...</div>
             </header>
 
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
-                <!-- Trang Bảng điều khiển -->
-                <div id="page-dashboard" class="page active">
-                    <div class="space-y-6">
-                        <div id="dashboard-cards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6"></div>
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Nhập liệu nhanh với AI</h3>
-                            <form id="ai-form" class="flex items-center gap-2">
-                                <i class="fas fa-robot text-gray-500"></i>
-                                <input id="ai-input" name="prompt" placeholder="Ví dụ: thêm chi phí 50k tiền điện" class="flex-1 p-2 border rounded-md" required>
-                                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Gửi</button>
-                            </form>
-                            <p id="ai-status" class="text-sm text-gray-500 mt-2"></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Trang Sản phẩm -->
-                <div id="page-products" class="page">
-                     <div class="space-y-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h3 id="product-form-title" class="text-lg font-semibold text-gray-800 mb-4">Thêm mới Sản phẩm</h3>
-                            <form id="product-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                                <input name="name" placeholder="Tên sản phẩm" class="p-2 border rounded-md w-full" required>
-                                <input name="price" type="number" placeholder="Giá" class="p-2 border rounded-md w-full" required>
-                                <input name="stock" type="number" placeholder="Tồn kho" class="p-2 border rounded-md w-full" required>
-                                <div class="flex space-x-2">
-                                    <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Thêm</button>
-                                    <button type="button" id="cancel-edit-product" class="w-full bg-gray-200 px-4 py-2 rounded-md hidden">Hủy</button>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                            <table class="min-w-full text-sm"><thead class="bg-gray-50"><tr class="text-gray-600"><th class="py-3 px-4 text-left font-semibold">Tên</th><th class="py-3 px-4 text-left font-semibold">Giá</th><th class="py-3 px-4 text-left font-semibold">Tồn kho</th><th class="py-3 px-4 text-center font-semibold">Hành động</th></tr></thead><tbody id="products-table-body" class="divide-y divide-gray-200"></tbody></table>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Trang Đơn hàng -->
-                <div id="page-orders" class="page">
-                    <div class="space-y-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Tạo Đơn hàng mới</h3>
-                            <form id="order-form" class="space-y-4">
-                                <div><label for="customer-select" class="block text-sm font-medium text-gray-700">Khách hàng</label><select id="customer-select" class="mt-1 block w-full p-2 border rounded-md" required></select></div>
-                                <div class="border p-4 rounded-md space-y-4">
-                                    <h4 class="font-semibold">Thêm sản phẩm</h4>
-                                    <div class="flex items-end gap-4"><div class="flex-1"><label for="product-select" class="block text-sm font-medium text-gray-700">Sản phẩm</label><select id="product-select" class="mt-1 block w-full p-2 border rounded-md"></select></div><div><label for="product-quantity" class="block text-sm font-medium text-gray-700">Số lượng</label><input id="product-quantity" type="number" value="1" min="1" class="mt-1 block w-24 p-2 border rounded-md"></div><button type="button" id="add-product-to-order-btn" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Thêm</button></div>
-                                    <div id="current-order-items"></div>
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
-                                    <div><label class="block text-sm font-medium text-gray-700">Tổng tiền</label><p id="order-total" class="mt-1 text-lg font-bold">0đ</p></div>
-                                    <div><label for="payment-method" class="block text-sm font-medium text-gray-700">Hình thức TT</label><select id="payment-method" class="mt-1 block w-full p-2 border rounded-md"><option value="debt">Ghi nợ</option><option value="cash">Tiền mặt</option><option value="bank">Tài khoản</option></select></div>
-                                    <div><label for="amount-paid" class="block text-sm font-medium text-gray-700">Đã thanh toán</label><input id="amount-paid" type="number" value="0" min="0" class="mt-1 block w-full p-2 border rounded-md"></div>
-                                </div>
-                                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Tạo Đơn hàng</button>
-                            </form>
-                        </div>
-                        <div class="bg-white rounded-xl shadow-sm overflow-hidden"><h3 class="text-lg font-semibold text-gray-800 p-4">Danh sách Đơn hàng</h3><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr class="text-gray-600"><th class="py-3 px-4 text-left font-semibold">Khách hàng</th><th class="py-3 px-4 text-left font-semibold">Sản phẩm</th><th class="py-3 px-4 text-left font-semibold">Công nợ</th><th class="py-3 px-4 text-left font-semibold">Trạng thái</th></tr></thead><tbody id="orders-table-body" class="divide-y divide-gray-200"></tbody></table></div>
-                    </div>
-                </div>
-
-                <!-- Trang Khách hàng -->
-                <div id="page-customers" class="page">
-                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                        <table class="min-w-full text-sm"><thead class="bg-gray-50"><tr class="text-gray-600"><th class="py-3 px-4 text-left font-semibold">Tên Khách hàng</th><th class="py-3 px-4 text-left font-semibold">Điện thoại</th><th class="py-3 px-4 text-left font-semibold">Tổng công nợ</th></tr></thead><tbody id="customers-table-body" class="divide-y divide-gray-200"></tbody></table>
-                    </div>
-                </div>
-                
-                <!-- Trang Tài chính -->
-                <div id="page-finance" class="page">
-                    <div class="space-y-6">
-                        <div class="bg-white p-6 rounded-xl shadow-sm">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Thêm Giao dịch mới</h3>
-                            <form id="finance-form" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                                <select name="type" class="p-2 border rounded-md w-full"><option value="expense">Chi</option><option value="income">Thu</option></select>
-                                <input name="description" placeholder="Mô tả" class="p-2 border rounded-md w-full" required>
-                                <input name="amount" type="number" placeholder="Số tiền" class="p-2 border rounded-md w-full" required>
-                                <select name="method" class="p-2 border rounded-md w-full"><option value="cash">Tiền mặt</option><option value="bank">Tài khoản</option></select>
-                                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 col-span-full md:col-span-1">Thêm Giao dịch</button>
-                            </form>
-                        </div>
-                        <div class="bg-white rounded-xl shadow-sm overflow-hidden"><h3 class="text-lg font-semibold text-gray-800 p-4">Lịch sử Giao dịch</h3><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr class="text-gray-600"><th class="py-3 px-4 text-left font-semibold">Loại</th><th class="py-3 px-4 text-left font-semibold">Mô tả</th><th class="py-3 px-4 text-left font-semibold">Số tiền</th><th class="py-3 px-4 text-left font-semibold">Phương thức</th><th class="py-3 px-4 text-left font-semibold">Ngày</th></tr></thead><tbody id="finance-table-body" class="divide-y divide-gray-200"></tbody></table></div>
-                    </div>
-                </div>
-
-                <!-- Trang Báo cáo -->
-                <div id="page-reports" class="page">
-                    <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Báo cáo & Lời khuyên từ AI</h3>
-                        <button id="get-ai-advice-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 mb-4">Nhận phân tích</button>
-                        <div id="ai-advice-container" class="p-4 border rounded-md bg-gray-50 min-h-[200px] whitespace-pre-wrap"></div>
-                    </div>
-                </div>
+            <main id="main-content" class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-6">
+                <!-- Các trang sẽ được render vào đây bằng JavaScript -->
             </main>
         </div>
     </div>
     
-    <!-- Modal Chi tiết Khách hàng -->
+    <!-- Thanh điều hướng dưới cho Mobile -->
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg md:hidden z-20"><div class="flex justify-around"></div></nav>
+
+    <!-- Modals -->
     <div id="customer-detail-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden"><div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"><div class="flex justify-between items-center border-b pb-2 mb-4"><h2 id="customer-modal-title" class="text-xl font-bold"></h2><button id="close-customer-modal-btn" class="text-2xl">&times;</button></div><div id="customer-modal-content" class="overflow-y-auto"></div></div></div>
-    <!-- Modal Xác nhận -->
     <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden"><div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md"><p id="modal-message" class="text-lg font-semibold mb-4"></p><div class="flex justify-end space-x-3"><button id="modal-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Hủy</button><button id="modal-confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Xác nhận</button></div></div></div>
 
     <!-- Tải các SDK của Firebase -->
@@ -167,7 +74,7 @@
     <!-- Mã JavaScript thuần túy của ứng dụng -->
     <script type="module">
         // --- CẤU HÌNH FIREBASE ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID", };
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // --- KHỞI TẠO FIREBASE ---
@@ -176,233 +83,342 @@
         const db = firebase.firestore();
         const { serverTimestamp } = firebase.firestore.FieldValue;
 
-        // --- BIẾN TRẠNG THÁI TOÀN CỤC ---
+        // --- BIẾN TOÀN CỤC & HẰNG SỐ ---
         let state = {
             userId: null, editingProductId: null,
             products: [], customers: [], orders: [], finances: [],
             newOrder: { items: [], totalAmount: 0 },
             customerDebts: {}
         };
+        const navItems = [
+            { id: 'dashboard', name: 'Bảng điều khiển', icon: 'fa-th-large' }, { id: 'products', name: 'Sản phẩm', icon: 'fa-box-open' },
+            { id: 'orders', name: 'Đơn hàng', icon: 'fa-shopping-cart' }, { id: 'customers', name: 'Khách hàng', icon: 'fa-users' },
+            { id: 'finance', name: 'Tài chính', icon: 'fa-wallet' }, { id: 'reports', name: 'Báo cáo', icon: 'fa-chart-line' },
+        ];
+        const mainContent = document.getElementById('main-content');
 
         // --- CÁC HÀM TIỆN ÍCH ---
         const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
-        const formatDate = (timestamp) => timestamp ? new Date(timestamp.toDate()).toLocaleDateString('vi-VN') : '';
+        const formatDate = (timestamp) => timestamp ? new Date(timestamp.toDate()).toLocaleDateString('vi-VN') : 'N/A';
+        
+        // --- TEMPLATES (Mẫu HTML cho các trang) ---
+        const templates = {
+            dashboard: `
+                <div class="space-y-6">
+                    <div id="dashboard-cards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6"></div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Nhập liệu nhanh</h3>
+                        <form id="quick-finance-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <select name="type" class="p-2 border rounded-md w-full"><option value="expense">Chi</option><option value="income">Thu</option></select>
+                            <input name="description" placeholder="Mô tả" class="p-2 border rounded-md w-full" required>
+                            <input name="amount" type="number" placeholder="Số tiền" class="p-2 border rounded-md w-full" required>
+                            <select name="method" class="p-2 border rounded-md w-full"><option value="cash">Tiền mặt</option><option value="bank">Tài khoản</option></select>
+                            <div class="lg:col-span-4"><button type="submit" class="w-full md:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Thêm Giao dịch</button></div>
+                        </form>
+                    </div>
+                </div>`,
+            products: `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 id="product-form-title" class="text-lg font-semibold text-gray-800 mb-4">Thêm mới Sản phẩm</h3>
+                        <form id="product-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <input name="name" placeholder="Tên sản phẩm" class="p-2 border rounded-md w-full" required>
+                            <input name="price" type="number" placeholder="Giá" class="p-2 border rounded-md w-full" required>
+                            <input name="stock" type="number" placeholder="Tồn kho" class="p-2 border rounded-md w-full" required>
+                            <div class="flex space-x-2">
+                                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Thêm</button>
+                                <button type="button" id="cancel-edit-product" class="w-full bg-gray-200 px-4 py-2 rounded-md hidden">Hủy</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr class="text-gray-600"><th class="py-3 px-4 text-left font-semibold">Tên</th><th class="py-3 px-4 text-left font-semibold">Giá</th><th class="py-3 px-4 text-left font-semibold">Tồn kho</th><th class="py-3 px-4 text-center font-semibold">Hành động</th></tr></thead><tbody id="products-table-body" class="divide-y divide-gray-200"></tbody></table></div>
+                </div>`,
+            orders: `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Tạo Đơn hàng mới</h3>
+                        <form id="order-form" class="space-y-4">
+                            <div><label for="customer-select" class="block text-sm font-medium text-gray-700">Khách hàng</label><select id="customer-select" class="mt-1 block w-full p-2 border rounded-md" required></select></div>
+                            <div class="border p-4 rounded-md space-y-4">
+                                <h4 class="font-semibold">Thêm sản phẩm</h4>
+                                <div class="flex items-end gap-4"><div class="flex-1"><label for="product-select" class="block text-sm font-medium text-gray-700">Sản phẩm</label><select id="product-select" class="mt-1 block w-full p-2 border rounded-md"></select></div><div><label for="product-quantity" class="block text-sm font-medium text-gray-700">Số lượng</label><input id="product-quantity" type="number" value="1" min="1" class="mt-1 block w-24 p-2 border rounded-md"></div><button type="button" id="add-product-to-order-btn" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Thêm</button></div>
+                                <div id="current-order-items"></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                                <div><label class="block text-sm font-medium text-gray-700">Tổng tiền</label><p id="order-total" class="mt-1 text-lg font-bold">0đ</p></div>
+                                <div><label for="payment-method" class="block text-sm font-medium text-gray-700">Hình thức TT</label><select id="payment-method" class="mt-1 block w-full p-2 border rounded-md"><option value="debt">Ghi nợ</option><option value="cash">Tiền mặt</option><option value="bank">Tài khoản</option></select></div>
+                                <div><label for="amount-paid" class="block text-sm font-medium text-gray-700">Đã thanh toán</label><input id="amount-paid" type="number" value="0" min="0" class="mt-1 block w-full p-2 border rounded-md"></div>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Tạo Đơn hàng</button>
+                        </form>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><h3 class="text-lg font-semibold text-gray-800 p-4">Danh sách Đơn hàng</h3><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr class="text-gray-600"><th class="py-3 px-4 text-left font-semibold">Khách hàng</th><th class="py-3 px-4 text-left font-semibold">Sản phẩm</th><th class="py-3 px-4 text-left font-semibold">Công nợ</th><th class="py-3 px-4 text-left font-semibold">Trạng thái</th></tr></thead><tbody id="orders-table-body" class="divide-y divide-gray-200"></tbody></table></div>
+                </div>`,
+            customers: `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Thêm Khách hàng mới</h3>
+                        <form id="customer-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                            <input name="name" placeholder="Tên khách hàng" class="p-2 border rounded-md w-full" required>
+                            <input name="phone" type="tel" placeholder="Số điện thoại" class="p-2 border rounded-md w-full">
+                            <input name="address" placeholder="Địa chỉ" class="p-2 border rounded-md w-full md:col-span-2">
+                            <div class="md:col-span-2"><button type="submit" class="w-full md:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Thêm Khách hàng</button></div>
+                        </form>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <h3 class="text-lg font-semibold text-gray-800 p-4">Danh sách Khách hàng</h3>
+                        <table class="min-w-full text-sm"><thead class="bg-gray-50"><tr class="text-gray-600"><th class="py-3 px-4 text-left font-semibold">Tên Khách hàng</th><th class="py-3 px-4 text-left font-semibold">Điện thoại</th><th class="py-3 px-4 text-left font-semibold">Tổng công nợ</th></tr></thead><tbody id="customers-table-body" class="divide-y divide-gray-200"></tbody></table>
+                    </div>
+                </div>`,
+            finance: `
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Thêm Giao dịch mới</h3>
+                        <form id="finance-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <select name="type" class="p-2 border rounded-md w-full"><option value="expense">Chi</option><option value="income">Thu</option></select>
+                            <input name="description" placeholder="Mô tả" class="p-2 border rounded-md w-full" required>
+                            <input name="amount" type="number" placeholder="Số tiền" class="p-2 border rounded-md w-full" required>
+                            <select name="method" class="p-2 border rounded-md w-full"><option value="cash">Tiền mặt</option><option value="bank">Tài khoản</option></select>
+                            <div class="lg:col-span-4"><button type="submit" class="w-full md:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Thêm Giao dịch</button></div>
+                        </form>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><h3 class="text-lg font-semibold text-gray-800 p-4">Lịch sử Giao dịch</h3><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr class="text-gray-600"><th class="py-3 px-4 text-left font-semibold">Loại</th><th class="py-3 px-4 text-left font-semibold">Mô tả</th><th class="py-3 px-4 text-left font-semibold">Số tiền</th><th class="py-3 px-4 text-left font-semibold">Phương thức</th><th class="py-3 px-4 text-left font-semibold">Ngày</th></tr></thead><tbody id="finance-table-body" class="divide-y divide-gray-200"></tbody></table></div>
+                </div>`,
+            reports: `
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Báo cáo & Lời khuyên từ AI</h3>
+                    <button id="get-ai-advice-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 mb-4 w-48 flex items-center justify-center">Nhận phân tích</button>
+                    <div id="ai-advice-container" class="p-4 border rounded-md bg-gray-50 min-h-[200px] whitespace-pre-wrap"></div>
+                </div>`,
+        };
         
         // --- QUẢN LÝ GIAO DIỆN (UI) ---
+        function updateNavActiveState(pageId) {
+            document.querySelectorAll('#sidebar-nav button, #bottom-nav button').forEach(btn => {
+                const isDesktop = btn.closest('#sidebar-nav');
+                const isActive = btn.dataset.page === pageId;
+                if (isDesktop) btn.classList.toggle('bg-slate-700', isActive);
+                else {
+                    btn.classList.toggle('text-blue-600', isActive);
+                    btn.classList.toggle('text-gray-500', !isActive);
+                }
+            });
+        }
+
         function showPage(pageId) {
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            document.getElementById(`page-${pageId}`).classList.add('active');
-            document.getElementById('page-title').textContent = document.querySelector(`[data-page='${pageId}']`).textContent;
-            document.querySelectorAll('#sidebar-nav button').forEach(btn => btn.classList.toggle('bg-slate-700', btn.dataset.page === pageId));
+            mainContent.innerHTML = templates[pageId] || '<p>Trang không tồn tại.</p>';
+            attachEventListenersForPage(pageId);
+            const navItem = navItems.find(item => item.id === pageId);
+            document.getElementById('page-title').textContent = navItem ? navItem.name : "Lỗi";
+            updateNavActiveState(pageId);
+            renderAllForPage(pageId);
         }
         
-        function showConfirmation(message, onConfirm) { /* ... giữ nguyên ... */ }
-        
-        // --- LOGIC BẢNG ĐIỀU KHIỂN ---
+        function showConfirmation(message, onConfirm) {
+            const modal = document.getElementById('confirmation-modal');
+            document.getElementById('modal-message').textContent = message;
+            modal.classList.remove('hidden');
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+            const confirmHandler = () => { onConfirm(); closeModal(); };
+            const closeModal = () => {
+                modal.classList.add('hidden');
+                confirmBtn.removeEventListener('click', confirmHandler);
+                cancelBtn.removeEventListener('click', closeModal);
+            };
+            confirmBtn.addEventListener('click', confirmHandler);
+            cancelBtn.addEventListener('click', closeModal);
+        }
+
+        // --- RENDER FUNCTIONS ---
+        function renderAllForPage(pageId) {
+            switch(pageId) {
+                case 'dashboard': renderDashboard(); break;
+                case 'products': renderProducts(); break;
+                case 'orders': renderOrders(); break;
+                case 'customers': renderCustomers(); break;
+                case 'finance': renderFinances(); break;
+            }
+        }
+
         function renderDashboard() {
+            const el = document.getElementById('dashboard-cards');
+            if (!el) return;
             const stats = { cash: 0, bank: 0, inventoryValue: 0, receivable: 0 };
             state.finances.forEach(t => {
-                if (t.type === 'income') {
-                    if (t.method === 'cash') stats.cash += t.amount; else stats.bank += t.amount;
-                } else {
-                    if (t.method === 'cash') stats.cash -= t.amount; else stats.bank -= t.amount;
-                }
+                const amount = t.type === 'income' ? t.amount : -t.amount;
+                if (t.method === 'cash') stats.cash += amount; else stats.bank += amount;
             });
             state.products.forEach(p => { stats.inventoryValue += (p.price || 0) * (p.stock || 0); });
             stats.receivable = Object.values(state.customerDebts).reduce((sum, debt) => sum + debt, 0);
-
-            const container = document.getElementById('dashboard-cards');
-            container.innerHTML = `
+            el.innerHTML = `
                 <div class="bg-white p-5 rounded-xl shadow-sm"><p class="text-sm text-gray-500">Tiền mặt</p><p class="text-2xl font-bold">${formatCurrency(stats.cash)}</p></div>
                 <div class="bg-white p-5 rounded-xl shadow-sm"><p class="text-sm text-gray-500">Tiền tài khoản</p><p class="text-2xl font-bold">${formatCurrency(stats.bank)}</p></div>
                 <div class="bg-white p-5 rounded-xl shadow-sm"><p class="text-sm text-gray-500">Giá trị kho</p><p class="text-2xl font-bold">${formatCurrency(stats.inventoryValue)}</p></div>
-                <div class="bg-white p-5 rounded-xl shadow-sm"><p class="text-sm text-gray-500">Công nợ phải thu</p><p class="text-2xl font-bold">${formatCurrency(stats.receivable)}</p></div>
-            `;
+                <div class="bg-white p-5 rounded-xl shadow-sm"><p class="text-sm text-gray-500">Công nợ phải thu</p><p class="text-2xl font-bold">${formatCurrency(stats.receivable)}</p></div>`;
         }
         
-        // --- LOGIC TRANG SẢN PHẨM ---
-        const productForm = document.getElementById('product-form');
-        function renderProducts() { /* ... giữ nguyên ... */ }
-        productForm.addEventListener('submit', async (e) => { /* ... giữ nguyên ... */ });
-
-        // --- LOGIC TRANG TÀI CHÍNH ---
-        const financeForm = document.getElementById('finance-form');
-        const financeTableBody = document.getElementById('finance-table-body');
-        function renderFinances() {
-            financeTableBody.innerHTML = state.finances.map(t => `
-                <tr class="hover:bg-gray-50">
-                    <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full ${t.type === 'income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${t.type === 'income' ? 'Thu' : 'Chi'}</span></td>
-                    <td class="py-3 px-4">${t.description}</td>
-                    <td class="py-3 px-4">${formatCurrency(t.amount)}</td>
-                    <td class="py-3 px-4">${t.method === 'cash' ? 'Tiền mặt' : 'Tài khoản'}</td>
-                    <td class="py-3 px-4">${formatDate(t.createdAt)}</td>
-                </tr>`).join('');
+        function renderProducts() {
+            const el = document.getElementById('products-table-body');
+            if (!el) return;
+            el.innerHTML = state.products.length === 0 
+                ? `<tr><td colspan="4" class="p-4 text-center text-gray-500">Chưa có sản phẩm nào.</td></tr>`
+                : state.products.map(p => `
+                    <tr class="hover:bg-gray-50"><td class="py-3 px-4">${p.name}</td><td class="py-3 px-4">${formatCurrency(p.price)}</td><td class="py-3 px-4">${p.stock}</td>
+                    <td class="py-3 px-4"><div class="flex justify-center space-x-2"><button data-id="${p.id}" class="edit-btn text-yellow-500 hover:text-yellow-700"><i class="fas fa-edit"></i></button><button data-id="${p.id}" class="delete-btn text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button></div></td></tr>`).join('');
         }
-        financeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const financeData = {
-                type: financeForm.type.value,
-                description: financeForm.description.value,
-                amount: parseFloat(financeForm.amount.value),
-                method: financeForm.method.value,
-                createdAt: serverTimestamp()
-            };
-            await db.collection(`artifacts/${appId}/users/${state.userId}/finance`).add(financeData);
-            financeForm.reset();
-        });
-
-        // --- LOGIC TRANG KHÁCH HÀNG ---
-        const customersTableBody = document.getElementById('customers-table-body');
+        
+        function renderOrders() {
+            const el = document.getElementById('orders-table-body');
+            if (!el) return;
+            el.innerHTML = state.orders.length === 0
+                ? `<tr><td colspan="4" class="p-4 text-center text-gray-500">Chưa có đơn hàng nào.</td></tr>`
+                : state.orders.map(o => `
+                    <tr class="hover:bg-gray-50"><td class="py-3 px-4">${o.customerName}</td><td class="py-3 px-4">${o.items.map(i => `${i.name}(${i.quantity})`).join(', ')}</td>
+                    <td class="py-3 px-4">${formatCurrency(o.totalAmount - (o.amountPaid || 0))}</td><td class="py-3 px-4">${o.status}</td></tr>`).join('');
+        }
+        
         function renderCustomers() {
-            customersTableBody.innerHTML = state.customers.map(c => `
-                <tr class="hover:bg-gray-50 cursor-pointer" data-id="${c.id}">
-                    <td class="py-3 px-4 font-semibold text-blue-600">${c.name}</td>
-                    <td class="py-3 px-4">${c.phone || ''}</td>
-                    <td class="py-3 px-4">${formatCurrency(state.customerDebts[c.id] || 0)}</td>
-                </tr>`).join('');
+            const el = document.getElementById('customers-table-body');
+            if (!el) return;
+            el.innerHTML = state.customers.map(c => `<tr class="hover:bg-gray-50 cursor-pointer" data-id="${c.id}"><td class="py-3 px-4 font-semibold text-blue-600">${c.name}</td><td class="py-3 px-4">${c.phone || ''}</td><td class="py-3 px-4">${formatCurrency(state.customerDebts[c.id] || 0)}</td></tr>`).join('');
         }
-        customersTableBody.addEventListener('click', (e) => {
-            const customerId = e.target.closest('tr')?.dataset.id;
-            if (!customerId) return;
-            const customer = state.customers.find(c => c.id === customerId);
-            const customerOrders = state.orders.filter(o => o.customerId === customerId);
-            const modal = document.getElementById('customer-detail-modal');
-            document.getElementById('customer-modal-title').textContent = `Chi tiết: ${customer.name}`;
-            document.getElementById('customer-modal-content').innerHTML = `
-                <h4 class="font-bold mb-2">Tổng công nợ: ${formatCurrency(state.customerDebts[customerId] || 0)}</h4>
-                <h4 class="font-bold mb-2">Lịch sử đơn hàng:</h4>
-                <div class="space-y-2">${customerOrders.length > 0 ? customerOrders.map(o => `
-                    <div class="p-2 border rounded-md">
-                        <p><strong>Ngày:</strong> ${formatDate(o.createdAt)}</p>
-                        <p><strong>Tổng tiền:</strong> ${formatCurrency(o.totalAmount)}</p>
-                        <p><strong>Công nợ:</strong> ${formatCurrency(o.totalAmount - (o.amountPaid || 0))}</p>
-                    </div>`).join('') : '<p>Chưa có đơn hàng.</p>'}
-                </div>`;
-            modal.classList.remove('hidden');
-        });
-        document.getElementById('close-customer-modal-btn').addEventListener('click', () => document.getElementById('customer-detail-modal').classList.add('hidden'));
-
-        // --- LOGIC TRANG ĐƠN HÀNG ---
-        const orderForm = document.getElementById('order-form');
-        function renderOrders() { /* ... giữ nguyên ... */ }
-        orderForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const customerId = document.getElementById('customer-select').value;
-            const amountPaid = parseFloat(document.getElementById('amount-paid').value);
-            const paymentMethod = document.getElementById('payment-method').value;
-
-            if (!customerId || state.newOrder.items.length === 0) return alert('Vui lòng chọn khách hàng và thêm sản phẩm.');
-            
-            const orderData = {
-                customerId,
-                customerName: state.customers.find(c => c.id === customerId)?.name,
-                items: state.newOrder.items,
-                totalAmount: state.newOrder.totalAmount,
-                amountPaid: amountPaid,
-                paymentMethod: paymentMethod,
-                status: document.getElementById('order-status').value,
-                createdAt: serverTimestamp()
-            };
-            
-            // Thêm đơn hàng và giao dịch tài chính nếu có thanh toán
-            await db.collection(`artifacts/${appId}/users/${state.userId}/orders`).add(orderData);
-            if (amountPaid > 0 && paymentMethod !== 'debt') {
-                await db.collection(`artifacts/${appId}/users/${state.userId}/finance`).add({
-                    type: 'income',
-                    description: `Thanh toán cho đơn hàng của ${orderData.customerName}`,
-                    amount: amountPaid,
-                    method: paymentMethod,
-                    createdAt: serverTimestamp()
-                });
-            }
-
-            state.newOrder = { items: [], totalAmount: 0 };
-            document.getElementById('current-order-items').innerHTML = '';
-            document.getElementById('order-total').textContent = '0đ';
-            orderForm.reset();
-        });
+        
+        function renderFinances() {
+            const el = document.getElementById('finance-table-body');
+            if (!el) return;
+            el.innerHTML = state.finances.map(t => `<tr class="hover:bg-gray-50"><td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full ${t.type === 'income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${t.type === 'income' ? 'Thu' : 'Chi'}</span></td><td class="py-3 px-4">${t.description}</td><td class="py-3 px-4">${formatCurrency(t.amount)}</td><td class="py-3 px-4">${t.method === 'cash' ? 'Tiền mặt' : 'Tài khoản'}</td><td class="py-3 px-4">${formatDate(t.createdAt)}</td></tr>`).join('');
+        }
 
         // --- LOGIC AI ---
-        const aiForm = document.getElementById('ai-form');
-        const aiStatus = document.getElementById('ai-status');
-        const getAdviceBtn = document.getElementById('get-ai-advice-btn');
-        const adviceContainer = document.getElementById('ai-advice-container');
-        
-        async function callGeminiAPI(prompt) { /* ... giữ nguyên ... */ }
+        function parseAIResponse(text) {
+            if (!text) return null;
+            try {
+                const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                return JSON.parse(cleanedText);
+            } catch (error) {
+                console.error("Lỗi khi phân tích JSON từ AI:", error, "Phản hồi gốc:", text);
+                return null;
+            }
+        }
 
-        aiForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const prompt = document.getElementById('ai-input').value;
-            aiStatus.textContent = 'AI đang xử lý...';
-            // Logic gọi Gemini API để phân tích và thêm dữ liệu
-            // Đây là phần giả định, cần tích hợp API thật
-            setTimeout(() => {
-                aiStatus.textContent = `Đã thực hiện yêu cầu: "${prompt}" (Đây là demo).`;
-                aiForm.reset();
-            }, 1500);
-        });
-        
-        getAdviceBtn.addEventListener('click', async () => {
-            adviceContainer.innerHTML = '<div class="spinner mx-auto"></div>';
-            const financialSummary = `Tổng thu: ${formatCurrency(state.finances.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0))}, Tổng chi: ${formatCurrency(state.finances.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0))}, Công nợ: ${formatCurrency(Object.values(state.customerDebts).reduce((s,d)=>s+d,0))}. Hãy cho lời khuyên.`;
-            // Logic gọi Gemini API
-            setTimeout(() => {
-                 adviceContainer.textContent = `Lời khuyên từ AI (Demo):\n\n- Tình hình công nợ khá cao, cần có kế hoạch thu hồi nợ.\n- Cân nhắc cắt giảm các khoản chi không cần thiết.`;
-            }, 2000);
-        });
+        async function callGeminiAPI(prompt, schema = null) {
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: schema ? { responseMimeType: "application/json", responseSchema: schema } : {}
+            };
+            const apiKey = ""; // Canvas tự cung cấp
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+                if (result.candidates?.[0]?.content?.parts?.[0]?.text) return result.candidates[0].content.parts[0].text;
+                throw new Error("Invalid API response structure");
+            } catch (error) {
+                console.error("Lỗi khi gọi API Gemini:", error);
+                return null;
+            }
+        }
+
+        // --- GÁN SỰ KIỆN (EVENT LISTENERS) ---
+        function attachEventListenersForPage(pageId) {
+            const basePath = `artifacts/${appId}/users/${state.userId}`;
+            if (pageId === 'dashboard') {
+                const quickFinanceForm = document.getElementById('quick-finance-form');
+                quickFinanceForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const financeData = {
+                        type: quickFinanceForm.type.value,
+                        description: quickFinanceForm.description.value,
+                        amount: parseFloat(quickFinanceForm.amount.value),
+                        method: quickFinanceForm.method.value,
+                        createdAt: serverTimestamp()
+                    };
+                    if (!financeData.description || !financeData.amount) {
+                        alert('Vui lòng điền đầy đủ mô tả và số tiền.');
+                        return;
+                    }
+                    await db.collection(`${basePath}/finance`).add(financeData);
+                    quickFinanceForm.reset();
+                });
+            }
+            if (pageId === 'customers') {
+                const customerForm = document.getElementById('customer-form');
+                customerForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const customerData = {
+                        name: customerForm.name.value,
+                        phone: customerForm.phone.value,
+                        address: customerForm.address.value,
+                        createdAt: serverTimestamp()
+                    };
+                    await db.collection(`${basePath}/customers`).add(customerData);
+                    customerForm.reset();
+                });
+            }
+            if (pageId === 'reports') {
+                document.getElementById('get-ai-advice-btn').addEventListener('click', async (e) => {
+                    const btn = e.currentTarget;
+                    const adviceContainer = document.getElementById('ai-advice-container');
+                    btn.disabled = true;
+                    btn.innerHTML = '<div class="spinner mx-auto"></div>';
+                    adviceContainer.textContent = '';
+
+                    const financialSummary = `Dữ liệu tài chính: Tổng thu ${formatCurrency(state.finances.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0))}, Tổng chi ${formatCurrency(state.finances.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0))}, Công nợ phải thu ${formatCurrency(Object.values(state.customerDebts).reduce((s,d)=>s+d,0))}. Hãy đóng vai một chuyên gia tài chính và đưa ra lời khuyên cụ thể cho một chủ cửa hàng nhỏ ở Việt Nam.`;
+                    const advice = await callGeminiAPI(financialSummary);
+                    
+                    adviceContainer.textContent = advice || 'Không thể nhận lời khuyên từ AI lúc này.';
+                    btn.disabled = false;
+                    btn.innerHTML = 'Nhận phân tích';
+                });
+            }
+        }
 
         // --- HÀM KHỞI ĐỘNG ỨNG DỤNG ---
         function initializeApp() {
+            // Tạo giao diện
+            document.getElementById('sidebar-nav').innerHTML = `<ul class="space-y-2">${navItems.map(item => `<li><button data-page="${item.id}" class="flex items-center w-full py-2.5 px-4 rounded-lg transition-colors duration-200 hover:bg-slate-700"><i class="fas ${item.icon} w-6 text-center mr-3"></i><span>${item.name}</span></button></li>`).join('')}</ul>`;
+            document.getElementById('bottom-nav').querySelector('div').innerHTML = navItems.slice(0, 5).map(item => `<button data-page="${item.id}" class="flex-1 flex flex-col items-center justify-center p-2 text-gray-500"><i class="fas ${item.icon} text-xl"></i><span class="text-xs mt-1">${item.name}</span></button>`).join('');
+            
+            showPage('dashboard'); // Hiển thị trang dashboard đầu tiên
+
+            // Gán sự kiện điều hướng
+            const handleNavClick = (e) => {
+                const button = e.target.closest('button');
+                if (button && button.dataset.page) showPage(button.dataset.page);
+            };
+            document.getElementById('sidebar-nav').addEventListener('click', handleNavClick);
+            document.getElementById('bottom-nav').addEventListener('click', handleNavClick);
+
+            // Xác thực và tải dữ liệu
             auth.onAuthStateChanged(async (user) => {
-                state.userId = user ? user.uid : (await auth.signInAnonymously()).user.uid;
+                if (!user) {
+                    try {
+                        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                        user = (await (token ? auth.signInWithCustomToken(token) : auth.signInAnonymously())).user;
+                    } catch (error) {
+                        console.error("Lỗi đăng nhập:", error);
+                        document.body.innerHTML = '<h1>Lỗi xác thực. Vui lòng tải lại trang.</h1>';
+                        return;
+                    }
+                }
+                state.userId = user.uid;
                 document.getElementById('user-info').textContent = `UserID: ${state.userId.substring(0, 8)}...`;
                 
                 const basePath = `artifacts/${appId}/users/${state.userId}`;
-                db.collection(`${basePath}/products`).onSnapshot(snap => {
-                    state.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    renderProducts();
-                    document.getElementById('product-select').innerHTML = `<option value="">-- Chọn sản phẩm --</option>` + state.products.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-                });
-                db.collection(`${basePath}/customers`).onSnapshot(snap => {
-                    state.customers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    renderCustomers();
-                    document.getElementById('customer-select').innerHTML = `<option value="">-- Chọn khách hàng --</option>` + state.customers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-                });
+                db.collection(`${basePath}/products`).onSnapshot(snap => { state.products = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })); renderAllForPage(mainContent.querySelector('.page.active')?.id.split('-')[1]); });
+                db.collection(`${basePath}/customers`).onSnapshot(snap => { state.customers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })); renderAllForPage(mainContent.querySelector('.page.active')?.id.split('-')[1]); });
+                db.collection(`${basePath}/finance`).orderBy('createdAt', 'desc').onSnapshot(snap => { state.finances = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })); renderAllForPage(mainContent.querySelector('.page.active')?.id.split('-')[1]); });
                 db.collection(`${basePath}/orders`).orderBy('createdAt', 'desc').onSnapshot(snap => {
                     state.orders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     state.customerDebts = {};
                     state.orders.forEach(order => {
                         const debt = order.totalAmount - (order.amountPaid || 0);
-                        if (debt > 0) {
-                            state.customerDebts[order.customerId] = (state.customerDebts[order.customerId] || 0) + debt;
-                        }
+                        if (debt > 0) state.customerDebts[order.customerId] = (state.customerDebts[order.customerId] || 0) + debt;
                     });
-                    renderOrders();
-                    renderCustomers(); // Re-render để cập nhật công nợ
-                    renderDashboard(); // Re-render dashboard
+                    renderAllForPage(mainContent.querySelector('.page.active')?.id.split('-')[1]);
                 });
-                db.collection(`${basePath}/finance`).orderBy('createdAt', 'desc').onSnapshot(snap => {
-                    state.finances = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    renderFinances();
-                    renderDashboard(); // Re-render dashboard
-                });
-            });
-
-            // Tạo các mục điều hướng
-            const navContainer = document.getElementById('sidebar-nav');
-            const navItems = [
-                { id: 'dashboard', name: 'Bảng điều khiển', icon: 'fa-th-large' },
-                { id: 'products', name: 'Sản phẩm', icon: 'fa-box-open' },
-                { id: 'orders', name: 'Đơn hàng', icon: 'fa-shopping-cart' },
-                { id: 'customers', name: 'Khách hàng', icon: 'fa-users' },
-                { id: 'finance', name: 'Tài chính', icon: 'fa-wallet' },
-                { id: 'reports', name: 'Báo cáo', icon: 'fa-chart-line' },
-            ];
-            navContainer.innerHTML = navItems.map(item => `<li class="mb-2"><button data-page="${item.id}" class="flex items-center w-full py-2.5 px-4 rounded-lg transition-colors duration-200 hover:bg-slate-700 ${item.id === 'dashboard' ? 'bg-slate-700' : ''}"><i class="fas ${item.icon} w-6 text-center mr-3"></i><span>${item.name}</span></button></li>`).join('');
-            
-            navContainer.addEventListener('click', (e) => {
-                const button = e.target.closest('button');
-                if (button && button.dataset.page) showPage(button.dataset.page);
             });
         }
 
