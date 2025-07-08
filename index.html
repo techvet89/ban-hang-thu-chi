@@ -50,7 +50,9 @@
         <div class="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
             <header class="flex justify-between items-center p-4 bg-white border-b sticky top-0 z-10">
                 <h2 id="page-title" class="text-xl font-bold text-gray-800">Bảng điều khiển</h2>
-                <div id="user-info" class="text-sm text-gray-600">Đang tải...</div>
+                <div id="user-info" class="text-sm text-gray-600 flex items-center gap-2">
+                    <span>Đang tải...</span>
+                </div>
             </header>
 
             <main id="main-content" class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-6">
@@ -410,7 +412,32 @@
                 if (user) {
                     // User is signed in.
                     state.userId = user.uid;
-                    document.getElementById('user-info').textContent = `UserID: ${state.userId.substring(0, 8)}...`;
+                    const userInfoEl = document.getElementById('user-info');
+                    userInfoEl.innerHTML = `
+                        <span>UserID: ${state.userId.substring(0, 8)}...</span>
+                        <button id="copy-userid-btn" title="Chép ID đầy đủ" class="p-1 text-gray-400 hover:text-gray-700">
+                            <i class="far fa-copy"></i>
+                        </button>
+                    `;
+                    
+                    document.getElementById('copy-userid-btn').addEventListener('click', () => {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = state.userId;
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            const btn = document.getElementById('copy-userid-btn');
+                            btn.innerHTML = `<i class="fas fa-check text-green-500"></i>`;
+                            setTimeout(() => {
+                                btn.innerHTML = `<i class="far fa-copy"></i>`;
+                            }, 2000);
+                        } catch (err) {
+                            console.error('Không thể chép ID:', err);
+                        }
+                        document.body.removeChild(textArea);
+                    });
                     
                     const basePath = `artifacts/${appId}/users/${state.userId}`;
                     const collectionsToWatch = ['products', 'customers', 'finance', 'orders'];
@@ -431,6 +458,11 @@
                             }
                             
                             renderAllForPage(state.currentPageId);
+                        }, error => {
+                            console.error(`Lỗi khi tải dữ liệu collection "${col}":`, error);
+                            if (error.code === 'permission-denied') {
+                                showCriticalError('Bị từ chối quyền truy cập dữ liệu. Vui lòng kiểm tra lại "Security Rules" trong Firebase Firestore của bạn.');
+                            }
                         });
                     });
                 } else {
