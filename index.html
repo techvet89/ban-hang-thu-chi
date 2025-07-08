@@ -1,37 +1,790 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ứng dụng Quản lý Bán hàng</title>
-  <!-- React và Tailwind -->
-  <script defer src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script defer src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script defer src="https://cdn.tailwindcss.com"></script>
+import React, { useState, useEffect, useMemo } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, doc, onSnapshot, addDoc, setDoc, getDocs, query, where, updateDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { ArrowUpRight, Bot, ChevronDown, ChevronUp, DollarSign, FileText, HandCoins, Landmark, MoreVertical, Package, Printer, ShoppingCart, Truck, Users, Wallet } from 'lucide-react';
 
-  <!-- Firebase SDK -->
-  <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+// --- CẤU HÌNH FIREBASE ---
+// Đã sửa lỗi bằng cách sử dụng trực tiếp cấu hình bạn cung cấp.
+const firebaseConfig = {
+    apiKey: "AIzaSyCRwR7otaGcytYR09kOQPwPL6DUW4iTRGA",
+    authDomain: "quan-ly-ban-hang-cua-toi.firebaseapp.com",
+    projectId: "quan-ly-ban-hang-cua-toi",
+    storageBucket: "quan-ly-ban-hang-cua-toi.firebasestorage.app",
+    messagingSenderId: "561156340453",
+    appId: "1:561156340453:web:24a43f1a1af87cae02f20c",
+    measurementId: "G-1NJZYY05QH"
+};
 
-  <!-- Cấu hình Firebase -->
-  <script>
-    const __firebase_config = JSON.stringify({
-      apiKey: "AIzaSyC_6t2QpzJD-JjGBvjEmUMW7Uaq04ebDKQ",
-      authDomain: "thu-chi-ban-hang.firebaseapp.com",
-      projectId: "thu-chi-ban-hang",
-      storageBucket: "thu-chi-ban-hang.firebasestorage.app",
-      messagingSenderId: "684992126489",
-      appId: "1:684992126489:web:b2362ae379ebf813bd9488",
-      measurementId: "G-2W6XJ1EXQV"
-    });
-    const __app_id = "thu-chi-ban-hang";
-  </script>
+const appId = firebaseConfig.projectId || 'default-app-id';
 
-  <!-- Mã ứng dụng React (từ app.js) -->
-  <script defer src="./app.js"></script>
-</head>
-<body class="bg-gray-100">
-  <div id="root" class="min-h-screen"></div>
-</body>
-</html>
+// --- KHỞI TẠO FIREBASE ---
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+// --- DỮ LIỆU MẪU (CHỈ DÙNG KHI KHÔNG CÓ DỮ LIỆU TRÊN FIRESTORE) ---
+const SEED_DATA = {
+    products: [
+        { name: 'Sản phẩm A', importPrice: 80000, sellingPrice: 120000, stock: 100 },
+        { name: 'Sản phẩm B', importPrice: 150000, sellingPrice: 200000, stock: 50 },
+        { name: 'Sản phẩm C', importPrice: 50000, sellingPrice: 75000, stock: 200 },
+    ],
+    customers: [
+        { name: 'Khách hàng 1', phone: '0901234567', address: '123 Đường ABC, Quận 1, TP.HCM', debt: 0 },
+        { name: 'Khách hàng 2', phone: '0987654321', address: '456 Đường XYZ, Quận 2, TP.HCM', debt: 500000 },
+    ],
+    finances: {
+        cash: 15000000,
+        bankAccount: 50000000,
+    },
+    expenses: [
+        { description: 'Tiền thuê mặt bằng tháng 7', amount: 10000000, date: new Date().toISOString() },
+        { description: 'Tiền điện', amount: 1500000, date: new Date().toISOString() },
+    ]
+};
+
+// --- COMPONENT CHÍNH ---
+export default function App() {
+    const [page, setPage] = useState('dashboard');
+    const [userId, setUserId] = useState(null);
+    const [isAuthReady, setIsAuthReady] = useState(false);
+
+    // --- XÁC THỰC VÀ KHỞI TẠO DỮ LIỆU ---
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                setUserId(user.uid);
+            } else {
+                await signInAnonymously(auth);
+            }
+            setIsAuthReady(true);
+        });
+        return () => unsubscribe();
+    }, []);
+    
+    // Khởi tạo dữ liệu mẫu nếu database trống
+    useEffect(() => {
+        if (!isAuthReady || !userId) return;
+
+        const checkAndSeedData = async () => {
+            const productsRef = collection(db, `artifacts/${appId}/users/${userId}/products`);
+            const productsSnap = await getDocs(productsRef);
+            if (productsSnap.empty) {
+                console.log("Seeding initial data...");
+                // Seed Products
+                SEED_DATA.products.forEach(async (product) => {
+                    await addDoc(collection(db, `artifacts/${appId}/users/${userId}/products`), product);
+                });
+                // Seed Customers
+                SEED_DATA.customers.forEach(async (customer) => {
+                    await addDoc(collection(db, `artifacts/${appId}/users/${userId}/customers`), customer);
+                });
+                // Seed Finances
+                await setDoc(doc(db, `artifacts/${appId}/users/${userId}/finances/summary`), SEED_DATA.finances);
+                // Seed Expenses
+                SEED_DATA.expenses.forEach(async (expense) => {
+                    await addDoc(collection(db, `artifacts/${appId}/users/${userId}/expenses`), expense);
+                });
+            }
+        };
+
+        checkAndSeedData();
+    }, [isAuthReady, userId]);
+
+    if (!isAuthReady) {
+        return <div className="flex items-center justify-center h-screen bg-gray-100"><div className="text-xl">Đang tải ứng dụng...</div></div>;
+    }
+
+    const renderPage = () => {
+        switch (page) {
+            case 'dashboard':
+                return <Dashboard userId={userId} />;
+            case 'orders':
+                return <Orders userId={userId} />;
+            case 'customers':
+                return <Customers userId={userId} />;
+            case 'products':
+                return <Products userId={userId} />;
+            case 'finance':
+                return <Finance userId={userId} />;
+            case 'reports':
+                return <Reports userId={userId} />;
+            default:
+                return <Dashboard userId={userId} />;
+        }
+    };
+
+    return (
+        <div className="flex h-screen bg-gray-50 font-sans">
+            <Sidebar setPage={setPage} currentPage={page} />
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+                {renderPage()}
+            </main>
+        </div>
+    );
+}
+
+// --- CÁC COMPONENT GIAO DIỆN ---
+
+function Sidebar({ setPage, currentPage }) {
+    const navItems = [
+        { id: 'dashboard', label: 'Bảng điều khiển', icon: <Package className="w-5 h-5" /> },
+        { id: 'orders', label: 'Đơn hàng', icon: <ShoppingCart className="w-5 h-5" /> },
+        { id: 'customers', label: 'Khách hàng', icon: <Users className="w-5 h-5" /> },
+        { id: 'products', label: 'Sản phẩm', icon: <Package className="w-5 h-5" /> },
+        { id: 'finance', label: 'Tài chính', icon: <Wallet className="w-5 h-5" /> },
+        { id: 'reports', label: 'Báo cáo', icon: <FileText className="w-5 h-5" /> },
+    ];
+
+    return (
+        <nav className="w-64 bg-white border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+                <h1 className="text-2xl font-bold text-gray-800">Quản Lý</h1>
+            </div>
+            <ul className="flex-1 p-2">
+                {navItems.map(item => (
+                    <li key={item.id}>
+                        <button
+                            onClick={() => setPage(item.id)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 my-1 rounded-lg text-left text-sm font-medium transition-colors ${currentPage === item.id ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+                        >
+                            {item.icon}
+                            {item.label}
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </nav>
+    );
+}
+
+function Dashboard({ userId }) {
+    const [finances, setFinances] = useState({ cash: 0, bankAccount: 0 });
+    const [stats, setStats] = useState({ orders: 0, customers: 0 });
+
+    useEffect(() => {
+        if (!userId) return;
+        const financeUnsub = onSnapshot(doc(db, `artifacts/${appId}/users/${userId}/finances/summary`), (doc) => {
+            if (doc.exists()) setFinances(doc.data());
+        });
+        const ordersUnsub = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/orders`), (snap) => setStats(s => ({ ...s, orders: snap.size })));
+        const customersUnsub = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/customers`), (snap) => setStats(s => ({ ...s, customers: snap.size })));
+        
+        return () => { financeUnsub(); ordersUnsub(); customersUnsub(); };
+    }, [userId]);
+
+    return (
+        <div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Bảng điều khiển</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* AI Chat */}
+                <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center gap-3 mb-4">
+                        <Bot className="w-8 h-8 text-blue-500" />
+                        <h3 className="text-xl font-semibold text-gray-700">Chat với AI</h3>
+                    </div>
+                    <textarea className="w-full h-24 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Hỏi AI về báo cáo, phân tích..."></textarea>
+                    <button className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Gửi</button>
+                </div>
+
+                {/* Financial Summary */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4">Số tiền hiện có</h3>
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <HandCoins className="w-6 h-6 text-green-500" />
+                                <span className="text-gray-600">Tiền mặt</span>
+                            </div>
+                            <span className="font-bold text-lg text-gray-800">{finances.cash.toLocaleString('vi-VN')} ₫</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <Landmark className="w-6 h-6 text-indigo-500" />
+                                <span className="text-gray-600">Tài khoản ngân hàng</span>
+                            </div>
+                            <span className="font-bold text-lg text-gray-800">{finances.bankAccount.toLocaleString('vi-VN')} ₫</span>
+                        </div>
+                        <div className="border-t pt-4 mt-4 flex justify-between items-center">
+                             <span className="font-semibold text-gray-600">Tổng cộng</span>
+                             <span className="font-bold text-xl text-blue-600">{(finances.cash + finances.bankAccount).toLocaleString('vi-VN')} ₫</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4">Thống kê nhanh</h3>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="p-3 bg-blue-100 rounded-full"><ShoppingCart className="w-6 h-6 text-blue-500" /></div>
+                            <div>
+                                <p className="text-gray-500">Tổng đơn hàng</p>
+                                <p className="text-2xl font-bold text-gray-800">{stats.orders}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                            <div className="p-3 bg-green-100 rounded-full"><Users className="w-6 h-6 text-green-500" /></div>
+                            <div>
+                                <p className="text-gray-500">Tổng khách hàng</p>
+                                <p className="text-2xl font-bold text-gray-800">{stats.customers}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Orders({ userId }) {
+    const [orders, setOrders] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [customers, setCustomers] = useState([]);
+    const [showAddOrder, setShowAddOrder] = useState(false);
+    const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
+
+    useEffect(() => {
+        if (!userId) return;
+        const unsubOrders = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/orders`), snap => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setOrders(data);
+        });
+        const unsubProducts = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/products`), snap => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setProducts(data);
+        });
+        const unsubCustomers = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/customers`), snap => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setCustomers(data);
+        });
+
+        return () => { unsubOrders(); unsubProducts(); unsubCustomers(); };
+    }, [userId]);
+
+    const handleAddOrder = async (orderData) => {
+        if (!userId) return;
+        
+        // Tính lợi nhuận
+        let profit = 0;
+        orderData.items.forEach(item => {
+            const product = products.find(p => p.id === item.productId);
+            if (product) {
+                profit += (item.sellingPrice - product.importPrice) * item.quantity;
+            }
+        });
+        orderData.profit = profit;
+        orderData.createdAt = new Date().toISOString();
+
+        // Thêm đơn hàng
+        const orderRef = await addDoc(collection(db, `artifacts/${appId}/users/${userId}/orders`), orderData);
+
+        // Cập nhật tài chính và công nợ
+        const financeRef = doc(db, `artifacts/${appId}/users/${userId}/finances/summary`);
+        const financeSnap = await getDocs(query(collection(db, `artifacts/${appId}/users/${userId}/finances`)));
+        const currentFinance = financeSnap.docs[0].data();
+
+        if (orderData.paymentMethod === 'Tiền mặt') {
+            await updateDoc(financeRef, { cash: currentFinance.cash + orderData.totalAmount });
+        } else if (orderData.paymentMethod === 'Chuyển khoản') {
+            await updateDoc(financeRef, { bankAccount: currentFinance.bankAccount + orderData.totalAmount });
+        } else if (orderData.paymentMethod === 'Công nợ') {
+            const customerRef = doc(db, `artifacts/${appId}/users/${userId}/customers`, orderData.customerId);
+            const customer = customers.find(c => c.id === orderData.customerId);
+            await updateDoc(customerRef, { debt: customer.debt + orderData.totalAmount });
+        }
+
+        // Thêm vào mục thu nhập
+        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/incomes`), {
+            description: `Lợi nhuận từ đơn hàng #${orderRef.id.substring(0, 5)}`,
+            amount: profit,
+            date: new Date().toISOString()
+        });
+        
+        // Cập nhật kho hàng
+        orderData.items.forEach(async item => {
+            const productRef = doc(db, `artifacts/${appId}/users/${userId}/products`, item.productId);
+            const product = products.find(p => p.id === item.productId);
+            await updateDoc(productRef, { stock: product.stock - item.quantity });
+        });
+
+        setShowAddOrder(false);
+    };
+
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-gray-800">Quản lý Đơn hàng</h2>
+                <button onClick={() => setShowAddOrder(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Thêm đơn hàng</button>
+            </div>
+            
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                <table className="w-full">
+                    <thead className="border-b-2 border-gray-200">
+                        <tr>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Mã ĐH</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Khách hàng</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Tổng tiền</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Thanh toán</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Ngày tạo</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {orders.map(order => (
+                            <tr key={order.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="p-3 text-sm text-gray-700">#{order.id.substring(0, 5)}</td>
+                                <td className="p-3 text-sm text-gray-700">{order.customerName}</td>
+                                <td className="p-3 text-sm text-gray-700 font-semibold">{order.totalAmount.toLocaleString('vi-VN')} ₫</td>
+                                <td className="p-3 text-sm text-gray-700">{order.paymentMethod}</td>
+                                <td className="p-3 text-sm text-gray-700">{new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
+                                <td className="p-3">
+                                    <button onClick={() => setSelectedOrderForInvoice(order)} className="text-blue-500 hover:text-blue-700 flex items-center gap-1">
+                                        <Printer className="w-4 h-4" /> In
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {showAddOrder && <AddOrderModal products={products} customers={customers} onAdd={handleAddOrder} onClose={() => setShowAddOrder(false)} />}
+            {selectedOrderForInvoice && <InvoiceModal order={selectedOrderForInvoice} onClose={() => setSelectedOrderForInvoice(null)} />}
+        </div>
+    );
+}
+
+function AddOrderModal({ products, customers, onAdd, onClose }) {
+    const [customerId, setCustomerId] = useState('');
+    const [items, setItems] = useState([{ productId: '', quantity: 1 }]);
+    const [paymentMethod, setPaymentMethod] = useState('Tiền mặt');
+
+    const handleItemChange = (index, field, value) => {
+        const newItems = [...items];
+        newItems[index][field] = value;
+        setItems(newItems);
+    };
+
+    const addItem = () => setItems([...items, { productId: '', quantity: 1 }]);
+    const removeItem = (index) => setItems(items.filter((_, i) => i !== index));
+
+    const totalAmount = useMemo(() => {
+        return items.reduce((total, item) => {
+            const product = products.find(p => p.id === item.productId);
+            return total + (product ? product.sellingPrice * item.quantity : 0);
+        }, 0);
+    }, [items, products]);
+
+    const handleSubmit = () => {
+        const customer = customers.find(c => c.id === customerId);
+        onAdd({
+            customerId,
+            customerName: customer.name,
+            items: items.map(item => {
+                const product = products.find(p => p.id === item.productId);
+                return { ...item, productName: product.name, sellingPrice: product.sellingPrice };
+            }),
+            totalAmount,
+            paymentMethod,
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl">
+                <h3 className="text-xl font-bold mb-4">Tạo đơn hàng mới</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Khách hàng</label>
+                        <select value={customerId} onChange={e => setCustomerId(e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            <option value="">Chọn khách hàng</option>
+                            {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Sản phẩm</label>
+                        {items.map((item, index) => (
+                            <div key={index} className="flex items-center gap-2 mb-2">
+                                <select value={item.productId} onChange={e => handleItemChange(index, 'productId', e.target.value)} className="block w-full p-2 border border-gray-300 rounded-md">
+                                    <option value="">Chọn sản phẩm</option>
+                                    {products.map(p => <option key={p.id} value={p.id}>{p.name} - {p.sellingPrice.toLocaleString('vi-VN')} ₫</option>)}
+                                </select>
+                                <input type="number" value={item.quantity} onChange={e => handleItemChange(index, 'quantity', parseInt(e.target.value))} className="w-20 p-2 border border-gray-300 rounded-md" min="1" />
+                                <button onClick={() => removeItem(index)} className="text-red-500">Xóa</button>
+                            </div>
+                        ))}
+                        <button onClick={addItem} className="text-sm text-blue-600">+ Thêm sản phẩm</button>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Hình thức thanh toán</label>
+                        <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            <option>Tiền mặt</option>
+                            <option>Chuyển khoản</option>
+                            <option>Công nợ</option>
+                        </select>
+                    </div>
+                    <div className="text-right font-bold text-lg">
+                        Tổng cộng: {totalAmount.toLocaleString('vi-VN')} ₫
+                    </div>
+                </div>
+                <div className="mt-6 flex justify-end gap-3">
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-lg">Hủy</button>
+                    <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Tạo đơn</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function InvoiceModal({ order, onClose }) {
+    const printInvoice = () => {
+        const printContent = document.getElementById('invoice-print-area').innerHTML;
+        const originalContent = document.body.innerHTML;
+        document.body.innerHTML = printContent;
+        window.print();
+        document.body.innerHTML = originalContent;
+        window.location.reload(); // Reload to restore scripts and event listeners
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl relative">
+                <div id="invoice-print-area" className="p-8">
+                    <h2 className="text-2xl font-bold text-center mb-6">HÓA ĐƠN BÁN HÀNG</h2>
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <p><strong>Khách hàng:</strong> {order.customerName}</p>
+                            <p><strong>Ngày:</strong> {new Date(order.createdAt).toLocaleDateString('vi-VN')}</p>
+                        </div>
+                        <div className="text-right">
+                            <p><strong>Mã hóa đơn:</strong> #{order.id.substring(0, 7).toUpperCase()}</p>
+                            <p><strong>Thanh toán:</strong> {order.paymentMethod}</p>
+                        </div>
+                    </div>
+                    <table className="w-full mb-6">
+                        <thead className="bg-gray-100">
+                            <tr>
+                                <th className="p-2 text-left">Sản phẩm</th>
+                                <th className="p-2 text-right">Số lượng</th>
+                                <th className="p-2 text-right">Đơn giá</th>
+                                <th className="p-2 text-right">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {order.items.map((item, index) => (
+                                <tr key={index} className="border-b">
+                                    <td className="p-2">{item.productName}</td>
+                                    <td className="p-2 text-right">{item.quantity}</td>
+                                    <td className="p-2 text-right">{item.sellingPrice.toLocaleString('vi-VN')} ₫</td>
+                                    <td className="p-2 text-right">{(item.sellingPrice * item.quantity).toLocaleString('vi-VN')} ₫</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <div className="text-right">
+                        <p className="text-lg font-bold">Tổng cộng: {order.totalAmount.toLocaleString('vi-VN')} ₫</p>
+                    </div>
+                </div>
+                <div className="p-4 bg-gray-50 border-t flex justify-end gap-3">
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-300 rounded-lg">Đóng</button>
+                    <button onClick={printInvoice} className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2"><Printer className="w-4 h-4" /> In hóa đơn</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Customers({ userId }) {
+    const [customers, setCustomers] = useState([]);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+    useEffect(() => {
+        if (!userId) return;
+        const unsub = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/customers`), snap => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setCustomers(data);
+        });
+        return () => unsub();
+    }, [userId]);
+
+    return (
+        <div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Khách hàng</h2>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                <table className="w-full">
+                    <thead>
+                        <tr className="border-b-2 border-gray-200">
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Tên khách hàng</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Số điện thoại</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Công nợ</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {customers.map(customer => (
+                            <tr key={customer.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="p-3 text-sm text-gray-700">{customer.name}</td>
+                                <td className="p-3 text-sm text-gray-700">{customer.phone}</td>
+                                <td className="p-3 text-sm font-semibold text-red-600">{customer.debt.toLocaleString('vi-VN')} ₫</td>
+                                <td className="p-3">
+                                    <button onClick={() => setSelectedCustomer(customer)} className="text-blue-500 hover:text-blue-700">Xem chi tiết</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {selectedCustomer && <CustomerDetailModal customer={selectedCustomer} userId={userId} onClose={() => setSelectedCustomer(null)} />}
+        </div>
+    );
+}
+
+function CustomerDetailModal({ customer, userId, onClose }) {
+    const [orders, setOrders] = useState([]);
+
+    useEffect(() => {
+        if (!userId || !customer) return;
+        const q = query(collection(db, `artifacts/${appId}/users/${userId}/orders`), where("customerId", "==", customer.id));
+        const unsub = onSnapshot(q, snap => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setOrders(data);
+        });
+        return () => unsub();
+    }, [userId, customer]);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl">
+                <h3 className="text-xl font-bold mb-4">Chi tiết khách hàng: {customer.name}</h3>
+                <div className="mb-4">
+                    <p><strong>Điện thoại:</strong> {customer.phone}</p>
+                    <p><strong>Địa chỉ:</strong> {customer.address}</p>
+                    <p><strong>Tổng công nợ:</strong> <span className="font-bold text-red-600">{customer.debt.toLocaleString('vi-VN')} ₫</span></p>
+                </div>
+                <h4 className="text-lg font-semibold mb-2">Lịch sử đơn hàng</h4>
+                <div className="max-h-80 overflow-y-auto border rounded-lg">
+                    <table className="w-full">
+                        <thead className="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th className="p-2 text-left">Mã ĐH</th>
+                                <th className="p-2 text-left">Ngày</th>
+                                <th className="p-2 text-right">Tổng tiền</th>
+                                <th className="p-2 text-right">Thanh toán</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {orders.map(order => (
+                                <tr key={order.id} className="border-b">
+                                    <td className="p-2">#{order.id.substring(0, 5)}</td>
+                                    <td className="p-2">{new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
+                                    <td className="p-2 text-right">{order.totalAmount.toLocaleString('vi-VN')} ₫</td>
+                                    <td className="p-2 text-right">{order.paymentMethod}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="mt-6 flex justify-end">
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-lg">Đóng</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Products({ userId }) {
+    const [products, setProducts] = useState([]);
+    useEffect(() => {
+        if (!userId) return;
+        const unsub = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/products`), snap => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setProducts(data);
+        });
+        return () => unsub();
+    }, [userId]);
+
+    return (
+        <div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Sản phẩm</h2>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                <table className="w-full">
+                    <thead>
+                        <tr className="border-b-2 border-gray-200">
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Tên sản phẩm</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Giá nhập</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Giá bán</th>
+                            <th className="p-3 text-sm font-semibold tracking-wide text-left">Tồn kho</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {products.map(product => (
+                            <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="p-3 text-sm text-gray-700">{product.name}</td>
+                                <td className="p-3 text-sm text-gray-700">{product.importPrice.toLocaleString('vi-VN')} ₫</td>
+                                <td className="p-3 text-sm text-gray-700">{product.sellingPrice.toLocaleString('vi-VN')} ₫</td>
+                                <td className="p-3 text-sm text-gray-700">{product.stock}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+function Finance({ userId }) {
+    const [incomes, setIncomes] = useState([]);
+    const [expenses, setExpenses] = useState([]);
+
+    useEffect(() => {
+        if (!userId) return;
+        const unsubIncomes = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/incomes`), snap => {
+            setIncomes(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+        const unsubExpenses = onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/expenses`), snap => {
+            setExpenses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        });
+        return () => { unsubIncomes(); unsubExpenses(); };
+    }, [userId]);
+
+    const totalIncome = useMemo(() => incomes.reduce((sum, item) => sum + item.amount, 0), [incomes]);
+    const totalExpense = useMemo(() => expenses.reduce((sum, item) => sum + item.amount, 0), [expenses]);
+
+    return (
+        <div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Tài chính</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Thu */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-xl font-semibold text-green-600 mb-4">Khoản thu (Lợi nhuận)</h3>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {incomes.map(item => (
+                            <div key={item.id} className="flex justify-between p-2 bg-green-50 rounded-lg">
+                                <span>{item.description}</span>
+                                <span className="font-semibold">{item.amount.toLocaleString('vi-VN')} ₫</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-4 pt-4 border-t font-bold text-lg flex justify-between">
+                        <span>Tổng thu:</span>
+                        <span>{totalIncome.toLocaleString('vi-VN')} ₫</span>
+                    </div>
+                </div>
+                {/* Chi */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-xl font-semibold text-red-600 mb-4">Khoản chi</h3>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                         {expenses.map(item => (
+                            <div key={item.id} className="flex justify-between p-2 bg-red-50 rounded-lg">
+                                <span>{item.description}</span>
+                                <span className="font-semibold">{item.amount.toLocaleString('vi-VN')} ₫</span>
+                            </div>
+                        ))}
+                    </div>
+                     <div className="mt-4 pt-4 border-t font-bold text-lg flex justify-between">
+                        <span>Tổng chi:</span>
+                        <span>{totalExpense.toLocaleString('vi-VN')} ₫</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Reports({ userId }) {
+    const [reportData, setReportData] = useState(null);
+    const [month, setMonth] = useState(new Date().getMonth());
+    const [year, setYear] = useState(new Date().getFullYear());
+
+    useEffect(() => {
+        if (!userId) return;
+
+        const generateReport = async () => {
+            const startDate = new Date(year, month, 1);
+            const endDate = new Date(year, month + 1, 0);
+
+            const ordersQuery = query(
+                collection(db, `artifacts/${appId}/users/${userId}/orders`),
+                where('createdAt', '>=', startDate.toISOString()),
+                where('createdAt', '<=', endDate.toISOString())
+            );
+            const incomesQuery = query(
+                collection(db, `artifacts/${appId}/users/${userId}/incomes`),
+                where('date', '>=', startDate.toISOString()),
+                where('date', '<=', endDate.toISOString())
+            );
+            const expensesQuery = query(
+                collection(db, `artifacts/${appId}/users/${userId}/expenses`),
+                where('date', '>=', startDate.toISOString()),
+                where('date', '<=', endDate.toISOString())
+            );
+
+            const [ordersSnap, incomesSnap, expensesSnap] = await Promise.all([
+                getDocs(ordersQuery),
+                getDocs(incomesQuery),
+                getDocs(expensesQuery)
+            ]);
+
+            const orders = ordersSnap.docs.map(d => d.data());
+            const incomes = incomesSnap.docs.map(d => d.data());
+            const expenses = expensesSnap.docs.map(d => d.data());
+
+            const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+            const totalProfitFromOrders = orders.reduce((sum, order) => sum + order.profit, 0);
+            const otherExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+            const netProfit = totalProfitFromOrders - otherExpenses;
+
+            setReportData({
+                totalRevenue,
+                totalProfitFromOrders,
+                otherExpenses,
+                netProfit
+            });
+        };
+
+        generateReport();
+    }, [userId, month, year]);
+
+    return (
+        <div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Báo cáo tài chính</h2>
+            <div className="flex gap-4 mb-6">
+                <select value={month} onChange={e => setMonth(parseInt(e.target.value))} className="p-2 border rounded-md">
+                    {Array.from({ length: 12 }, (_, i) => <option key={i} value={i}>Tháng {i + 1}</option>)}
+                </select>
+                <input type="number" value={year} onChange={e => setYear(parseInt(e.target.value))} className="p-2 border rounded-md" />
+            </div>
+
+            {reportData ? (
+                <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="text-2xl font-bold text-center mb-6">BÁO CÁO THÁNG {month + 1}/{year}</h3>
+                    <div className="space-y-4">
+                        <div className="flex justify-between p-4 bg-gray-50 rounded-lg">
+                            <span className="font-medium text-gray-600">Tổng doanh thu</span>
+                            <span className="font-bold text-lg text-blue-600">{reportData.totalRevenue.toLocaleString('vi-VN')} ₫</span>
+                        </div>
+                        <div className="flex justify-between p-4 bg-gray-50 rounded-lg">
+                            <span className="font-medium text-gray-600">Tổng lợi nhuận từ đơn hàng</span>
+                            <span className="font-bold text-lg text-green-600">{reportData.totalProfitFromOrders.toLocaleString('vi-VN')} ₫</span>
+                        </div>
+                        <div className="flex justify-between p-4 bg-gray-50 rounded-lg">
+                            <span className="font-medium text-gray-600">Chi phí khác</span>
+                            <span className="font-bold text-lg text-red-600">- {reportData.otherExpenses.toLocaleString('vi-VN')} ₫</span>
+                        </div>
+                        <div className="border-t-2 border-dashed my-4"></div>
+                        <div className="flex justify-between p-4 bg-blue-50 rounded-lg">
+                            <span className="font-bold text-xl text-gray-800">Lợi nhuận ròng</span>
+                            <span className={`font-extrabold text-2xl ${reportData.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                {reportData.netProfit.toLocaleString('vi-VN')} ₫
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <p>Đang tạo báo cáo...</p>
+            )}
+        </div>
+    );
+}
